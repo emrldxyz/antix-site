@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>anti — discord bot developer</title>
+<meta name="description" content="anti — discord bot developer. take a break and run dino_runner.exe.">
+<meta name="theme-color" content="#050507">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23050507'/%3E%3Crect x='7' y='9' width='7' height='15' fill='%23a855f7'/%3E%3Crect x='17' y='9' width='8' height='4' fill='%23f1f5f9'/%3E%3C/svg%3E">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
+
+<script>
+tailwind.config = {
+    theme: {
+        extend: {
+            fontFamily: { mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'] },
+            colors: { ink: '#050507', panel: '#0b0b0f', accent: '#a855f7' }
+        }
+    }
+}
+</script>
+
+<style>
+:root{ --accent:#a855f7; --ink:#050507; }
+html{ background:var(--ink); }
+body{ background:var(--ink); color:#e4e4e7; }
+
+/* ---- atmosphere ---- */
+.bg-grid{ position:fixed; inset:0; z-index:0; pointer-events:none;
+    background-image:radial-gradient(rgba(255,255,255,.05) 1px, transparent 1.3px);
+    background-size:26px 26px;
+    -webkit-mask-image:radial-gradient(120% 90% at 50% 0%, #000 35%, transparent 78%);
+    mask-image:radial-gradient(120% 90% at 50% 0%, #000 35%, transparent 78%); }
+.grain{ position:fixed; inset:-60%; z-index:80; pointer-events:none; opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+    animation:grain .8s steps(3) infinite; }
+@keyframes grain{ 0%{transform:translate(0,0)} 33%{transform:translate(-1.5%,1%)} 66%{transform:translate(1%,-1.5%)} 100%{transform:translate(0,0)} }
+
+/* ---- boot ---- */
+#bootLog b{ color:#f4f4f5; }
+.t-dim{ color:#52525b; } .t-ok{ color:var(--accent); font-weight:700; } .t-acc{ color:var(--accent); }
+
+/* ---- reveal ---- */
+[data-reveal]{ opacity:0; transform:translateY(18px);
+    transition:opacity .9s cubic-bezier(.16,1,.3,1) var(--d,0s), transform .9s cubic-bezier(.16,1,.3,1) var(--d,0s); }
+[data-reveal].is-in{ opacity:1; transform:none; }
+
+/* ---- cursors ---- */
+.caret{ display:inline-block; width:.42ch; height:.68em; margin-left:.14em; background:var(--accent); animation:blink 1.1s steps(1) infinite; }
+.type-caret{ display:inline-block; width:.6em; height:1.05em; margin-left:3px; background:var(--accent); animation:blink .9s steps(1) infinite; vertical-align:-.15em; }
+@keyframes blink{ 0%,55%{opacity:1} 56%,100%{opacity:0} }
+
+/* ---- animated word gradients ---- */
+@keyframes gradMove{ 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+.grad-discord{
+    background:linear-gradient(90deg,#a855f7 0%,#5865F2 20%,#1b1b22 40%,#7c3aed 60%,#c084fc 80%,#1b1b22 100%);
+    background-size:300% 100%;
+    -webkit-background-clip:text; background-clip:text;
+    color:transparent; -webkit-text-fill-color:transparent;
+    animation:gradMove 6s ease-in-out infinite; }
+.grad-bw{
+    background:linear-gradient(90deg,#f4f4f5 0%,#52525b 25%,#1d1d23 45%,#8e8e96 65%,#f4f4f5 100%);
+    background-size:300% 100%;
+    -webkit-background-clip:text; background-clip:text;
+    color:transparent; -webkit-text-fill-color:transparent;
+    animation:gradMove 7.5s ease-in-out infinite; }
+.txt-outline{ color:transparent; -webkit-text-stroke:1.5px rgba(244,244,245,.85); }
+
+/* ---- os window ---- */
+.os-window{ background:rgba(11,11,15,.78); -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px);
+    border:1px solid rgba(255,255,255,.09); border-radius:20px;
+    box-shadow:0 34px 90px -28px rgba(0,0,0,.9); transition:border-color .3s; }
+.os-window:hover{ border-color:rgba(255,255,255,.16); }
+.tb-dot{ background:#1c1c22; transition:background .3s; }
+.os-window:hover .tb-dot{ background:#2b2b33; }
+.os-window:hover .tb-dot:first-child{ background:var(--accent); }
+.crt::after{ content:''; position:absolute; inset:0; pointer-events:none; border-radius:inherit;
+    background:repeating-linear-gradient(0deg, rgba(0,0,0,.16) 0 1px, transparent 1px 3px);
+    box-shadow:inset 0 0 44px rgba(0,0,0,.35); }
+
+/* ---- game screen ---- */
+#gameScreen{ aspect-ratio:400/160; }
+@media (max-width:640px){ #gameScreen{ aspect-ratio:400/240; } }
+@supports not (aspect-ratio: 400/160){ #gameScreen{ height:240px; } }
+
+/* ---- buttons ---- */
+.btn-primary{ background:#f4f4f2; color:#0b0b0d; transition:transform .16s ease, box-shadow .16s ease, background-color .16s ease; }
+.btn-primary:hover{ background:#fff; transform:translateY(-2px); box-shadow:0 14px 34px -14px rgba(244,244,242,.5); }
+.btn-primary:active{ transform:translateY(0) scale(.98); box-shadow:none; }
+.kbd{ border:1px solid rgba(0,0,0,.3); background:rgba(0,0,0,.06); border-radius:5px; padding:2px 7px; font-size:9px; letter-spacing:.12em; font-weight:700; }
+
+/* ---- watermark ---- */
+.watermark{ position:absolute; right:-4%; top:-2%; z-index:0; font-weight:800; font-size:clamp(180px,24vw,380px);
+    line-height:.82; letter-spacing:-.05em; color:transparent; -webkit-text-stroke:1px rgba(255,255,255,.05);
+    pointer-events:none; user-select:none; }
+
+::-webkit-scrollbar{ width:8px; } ::-webkit-scrollbar-track{ background:#050507; }
+::-webkit-scrollbar-thumb{ background:#232329; border-radius:4px; } ::-webkit-scrollbar-thumb:hover{ background:#33333b; }
+
+@media (prefers-reduced-motion: reduce){
+    [data-reveal]{ transition:none; opacity:1; transform:none; }
+    .grain,.caret,.type-caret,.grad-discord,.grad-bw{ animation:none; }
+    html{ scroll-behavior:auto; }
+}
+</style>
+<noscript><style>[data-reveal]{opacity:1;transform:none}</style></noscript>
+</head>
+
+<body class="font-mono antialiased bg-ink overflow-x-hidden min-h-screen flex flex-col select-none selection:bg-accent selection:text-black"
+      oncontextmenu="return false;" onselectstart="return false;" ondragstart="return false;">
+
+<!-- atmosphere layers -->
+<div class="bg-grid" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+
+<!-- boot sequence -->
+<div id="boot" class="fixed inset-0 z-[70] bg-ink flex items-center justify-center transition-opacity duration-500 cursor-pointer">
+    <div class="w-full max-w-md px-8">
+        <pre id="bootLog" class="text-[11px] leading-[1.9] text-zinc-400 whitespace-pre-wrap"></pre>
+    </div>
+    <span class="absolute bottom-8 left-1/2 -translate-x-1/2 text-[8px] tracking-[0.35em] text-zinc-700">CLICK TO SKIP</span>
+</div>
+
+<!-- header -->
+<header data-reveal style="--d:0s" class="fixed top-0 inset-x-0 z-50 bg-ink/80 backdrop-blur-md border-b border-white/[0.06]">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        <a href="#" class="flex items-center gap-3 group">
+            <img src="https://media.discordapp.net/attachments/1540984114604146760/1545649101385895966/f1ed13447347f8c5a1dd2df94fd3b145.png?ex=6a9ce966&is=6a9b97e6&hm=dcc2121ac226a895082bfc8c0b987c4014fad9b017d7a18fdf72937f907a959b&=&format=webp&quality=lossless"
+                 alt="anti" class="avatar w-9 h-9 rounded-full object-cover border border-white/20 group-hover:scale-105 transition-transform">
+            <span class="font-extrabold tracking-[0.4em] text-sm text-white">anti</span>
+        </a>
+    </div>
+</header>
+
+<main class="relative flex-grow z-10 overflow-hidden">
+    <div class="watermark" aria-hidden="true">anti</div>
+
+    <!-- hero -->
+    <section class="relative z-10 pt-32 md:pt-40 pb-14 md:pb-16">
+        <div class="max-w-7xl mx-auto px-6">
+            <h1 data-reveal style="--d:.1s" class="font-extrabold uppercase leading-[0.98] tracking-tight text-white text-[clamp(2.6rem,7.5vw,5.6rem)]">
+                <span class="block"><span class="grad-discord">DISCORD</span> <span class="txt-outline">BOT</span></span>
+                <span class="block"><span id="devWord" class="grad-bw">DEVELOPER</span><span class="caret" aria-hidden="true"></span></span>
+            </h1>
+
+            <p data-reveal style="--d:.22s" class="mt-7 text-sm text-zinc-500">
+                <span id="typed" class="text-zinc-300"></span><span class="type-caret" aria-hidden="true"></span>
+            </p>
+
+            <div data-reveal style="--d:.34s" class="mt-10">
+                <a href="#gameSection" id="ctaPlay" class="btn-primary group inline-flex items-center gap-3.5 rounded-xl px-7 py-4 text-[13px] font-bold tracking-wide">
+                    <i class="fa-solid fa-gamepad text-[15px] group-hover:-rotate-12 transition-transform"></i>
+                    <span>Play a quick game?</span>
+                    <span class="kbd">SPACE</span>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- game — full width -->
+    <section id="gameSection" data-reveal style="--d:.42s" class="relative z-10 scroll-mt-24 pb-20 md:pb-28 max-w-7xl mx-auto px-6">
+        <div class="os-window p-2.5">
+            <!-- title bar -->
+            <div class="flex items-center justify-between px-2 py-1.5 mb-2 border-b border-white/[0.07]">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="flex items-center gap-1.5">
+                        <span class="tb-dot w-2.5 h-2.5 rounded-full"></span>
+                        <span class="tb-dot w-2.5 h-2.5 rounded-full"></span>
+                        <span class="tb-dot w-2.5 h-2.5 rounded-full"></span>
+                    </div>
+                    <span class="text-[10px] text-zinc-500 tracking-[0.12em] truncate">dino_runner.exe <span class="text-zinc-700">— anti os</span></span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <button id="sndBtn" title="Sound" aria-label="Toggle sound"
+                        class="w-7 h-7 rounded-md border border-white/10 text-zinc-500 hover:text-white hover:border-white/30 flex items-center justify-center text-[11px] transition-colors"></button>
+                    <button id="rstBtn" title="Restart" aria-label="Restart game"
+                        class="w-7 h-7 rounded-md border border-white/10 text-zinc-500 hover:text-white hover:border-white/30 flex items-center justify-center text-[11px] transition-colors">
+                        <i class="fa-solid fa-rotate-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- screen -->
+            <div id="gameScreen" class="crt relative w-full rounded-lg overflow-hidden border border-white/[0.07] bg-[#0a0a0d]">
+                <canvas id="dinoCanvas" class="absolute inset-0 w-full h-full block touch-none cursor-pointer"></canvas>
+            </div>
+
+            <!-- status bar -->
+            <div class="flex items-center justify-between px-2 pt-2 text-[9px] tracking-[0.15em]">
+                <div class="flex items-center gap-2">
+                    <span id="stateDot" class="w-1.5 h-1.5 rounded-full bg-zinc-600 transition-colors"></span>
+                    <span id="stateTxt" class="text-zinc-500 transition-colors">READY</span>
+                </div>
+                <span id="hintTxt" class="text-zinc-600 hidden sm:block">SPACE JUMP · ↓ DUCK · R RESET</span>
+                <span id="spdVal" class="text-zinc-600 tabular-nums">×1.00</span>
+            </div>
+        </div>
+    </section>
+</main>
+
+<!-- footer -->
+<footer class="relative z-10 py-7 border-t border-white/[0.06]">
+    <div class="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <img src="https://media.discordapp.net/attachments/1540984114604146760/1545649101385895966/f1ed13447347f8c5a1dd2df94fd3b145.png?ex=6a9ce966&is=6a9b97e6&hm=dcc2121ac226a895082bfc8c0b987c4014fad9b017d7a18fdf72937f907a959b&=&format=webp&quality=lossless"
+                 alt="anti" class="avatar w-6 h-6 rounded-full object-cover border border-white/20">
+            <span class="grad-bw font-extrabold text-sm tracking-[0.55em]" style="animation-duration:9s">anti</span>
+        </div>
+        <p class="text-[9px] tracking-[0.22em] text-zinc-600">© 2026 anti</p>
+    </div>
+</footer>
+
+<!-- page protection -->
+<script>
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('keydown', e => {
+        const k = (e.key || '').toLowerCase();
+        if (
+            e.key === 'F12' ||
+            (e.ctrlKey && e.shiftKey && (k === 'i' || k === 'j' || k === 'c')) ||
+            (e.ctrlKey && (k === 'u' || k === 's' || k === 'p')) ||
+            (e.metaKey && e.altKey && (k === 'i' || k === 'j' || k === 'c'))
+        ) { e.preventDefault(); return false; }
+    });
+</script>
+
+<script>
+/* ============ helpers: avatars, scramble, typing, boot ============ */
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const AV_FALLBACK = 'data:image/svg+xml,' + encodeURIComponent(
+    "<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64'><rect width='64' height='64' fill='#0b0b0f'/><rect x='14' y='18' width='14' height='30' fill='#a855f7'/><rect x='34' y='18' width='16' height='8' fill='#f1f5f9'/></svg>");
+document.querySelectorAll('img.avatar').forEach(im => im.addEventListener('error', () => { im.src = AV_FALLBACK; }, { once:true }));
+
+function scramble(el, text, dur = 800){
+    if (el._busy) return; el._busy = true;
+    const G = '#$%&/\\<>[]{}=+*0123456789';
+    const t0 = performance.now();
+    (function f(t){
+        const p = Math.min(1, (t - t0) / dur);
+        const n = Math.floor(p * text.length);
+        let out = text.slice(0, n);
+        for (let i = n; i < text.length; i++) out += G[(Math.random() * G.length) | 0];
+        el.textContent = out;
+        if (p < 1) requestAnimationFrame(f); else { el.textContent = text; el._busy = false; }
+    })(t0);
+}
+
+function typeLine(){
+    const el = document.getElementById('typed'); if (!el) return;
+    const str = '> building discord bots that scale, behave & never sleep.';
+    if (REDUCED){ el.textContent = str; return; }
+    let i = 0;
+    const iv = setInterval(() => { el.textContent = str.slice(0, ++i); if (i >= str.length) clearInterval(iv); }, 26);
+}
+
+/* ============ boot sequence ============ */
+(function(){
+    const bootEl = document.getElementById('boot');
+    const log = document.getElementById('bootLog');
+    let seen = false; try { seen = sessionStorage.getItem('antiBooted') === '1'; } catch(e){}
+    let done = false;
+
+    function finish(instant){
+        if (done) return; done = true;
+        try { sessionStorage.setItem('antiBooted', '1'); } catch(e){}
+        document.body.style.overflow = '';
+        window.dispatchEvent(new Event('anti:booted'));
+        if (instant){ bootEl.remove(); } else { bootEl.classList.add('opacity-0','pointer-events-none'); setTimeout(() => bootEl.remove(), 650); }
+        document.querySelectorAll('[data-reveal]').forEach(el => el.classList.add('is-in'));
+        setTimeout(() => { const dw = document.getElementById('devWord'); if (dw && !REDUCED) scramble(dw, 'DEVELOPER', 850); }, 500);
+        setTimeout(typeLine, 1050);
+    }
+
+    if (REDUCED || seen){ document.body.style.overflow = ''; finish(true); return; }
+    document.body.style.overflow = 'hidden';
+
+    const lines = [
+        '<b>anti os</b> <span class="t-dim">— cold boot</span>',
+        '&gt; memory check ............... <span class="t-ok">OK</span>',
+        '&gt; mounting /home/anti ........ <span class="t-ok">OK</span>',
+        '&gt; loading dino_runner.exe .... <span class="t-ok">OK</span>',
+        '&gt; establishing uplink ........ <span class="t-ok">OK</span>',
+        '',
+        '<span class="t-acc">welcome, guest_</span>'
+    ];
+    let i = 0;
+    const iv = setInterval(() => {
+        if (i < lines.length){ log.innerHTML += lines[i] + '\n'; i++; }
+        else { clearInterval(iv); setTimeout(() => finish(false), 420); }
+    }, 115);
+    bootEl.addEventListener('click', () => finish(false));
+    window.addEventListener('keydown', () => finish(false), { once: true });
+})();
+</script>
+
+<script>
+/* ============ dino_runner.exe ============ */
+(() => {
+"use strict";
+const canvas = document.getElementById('dinoCanvas');
+const ctx = canvas.getContext('2d');
+const screen = document.getElementById('gameScreen');
+const stateDot = document.getElementById('stateDot');
+const stateTxt = document.getElementById('stateTxt');
+const spdEl = document.getElementById('spdVal');
+const sndBtn = document.getElementById('sndBtn');
+const rstBtn = document.getElementById('rstBtn');
+const hintEl = document.getElementById('hintTxt');
+
+const W = 400, H = 160, GROUND = 134;
+const GRAV = 0.62, JUMP_V = -10.8, V_CUT = -4.2, BASE_SPD = 4.3, MAX_SPD = 9;
+const BASE_TITLE = document.title;
+
+/* ---------- palettes (night <-> day every 500 pts) ---------- */
+const PAL = {
+    night: { bg:[10,10,13],   fg:[236,240,244] },
+    day:   { bg:[242,242,234], fg:[22,22,26] }
+};
+const rgba = (c, a = 1) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+
+/* ---------- pixel sprites ---------- */
+const DINO_BODY = [
+"..........XXXXXXXX",".........XXXXXXXXX",".........XX.XXXXXX",".........XXXXXXXXX",
+".........XXXXXXXXX",".........XXXX.....",".........XXXXXXXX.","X........XXXX.....",
+"X.......XXXXX.....","XX.....XXXXXXX....","XXX...XXXXXXXXXX..","XXXX.XXXXXXXXXXXX.",
+"XXXXXXXXXXXXXXXXX.","XXXXXXXXXXXXXXXX..",".XXXXXXXXXXXXXXX..","..XXXXXXXXXXXXX...",
+"...XXXXXXXXXXX....","....XXXXXXXXX....."];
+const LEGS_STAND = [
+"......XX...XX.....","......XX...XX.....","......XX...XX.....","......XX...XX.....","......XXX..XXX...."];
+const LEGS_RUN1 = [
+"......XX...XX.....","......XX...XX.....","......XX...XX.....","......XX...XXX....","......XXX........."];
+const LEGS_RUN2 = [
+"......XX...XX.....","......XX...XX.....","......XX...XX.....","......XXX..XX.....","...........XXX...."];
+const DUCK_BODY = [
+"............XXXXXXXX","...........XXXXXXXXX","...........XX.XXXXXX","X..........XXXXXXXXX",
+"XX.......XXXXXXXX...","XXXX..XXXXXXXXXXX...","XXXXXXXXXXXXXXXXX...",".XXXXXXXXXXXXXXXX..."];
+const DUCK_A = ["...XX....XX........","...XX....XX........","...XXX...XXX......."];
+const DUCK_B = ["...XX....XX........","...XXX...XX........",".........XXX......."];
+const CACTUS_MAP = [
+"...XX...","...XX...","...XX..X",".X.XX..X",".X.XX..X",".X.XX..X",".X.XX..X",
+".X.XX.XX",".XXXX.XX","...XXXX.","...XX...","...XX...","...XX..."];
+const BIRD_A = [
+"......XX........","......XXXX......","......XXXXXX....","......XXXXXXXX..","XXXXXXXXXXXXXXXX",
+"XXXXXXXXXXXXXXXX","X..XXXXXXXXXXXXX","...XXXXXXXXXXXXX","....XXXXXXXXXXX.","......XXXXXXX..."];
+const BIRD_B = [
+"XXXXXXXXXXXXXXXX","XXXXXXXXXXXXXXXX","X..XXXXXXXXXXXXX","......XXXXXXXXXX","......XXXXXXXX..",
+"......XXXXXX....","......XXXX......","......XX........"];
+const CLOUD_MAP = ["....XXXX....","..XXXXXXXX..",".XXXXXXXXXX.","XXXXXXXXXXXX"];
+
+function drawSprite(map, x, y, px, style){
+    ctx.fillStyle = style;
+    for (let r = 0; r < map.length; r++){
+        const row = map[r];
+        for (let c = 0; c < row.length; c++)
+            if (row[c] === 'X') ctx.fillRect(x + c * px, y + r * px, px + 0.12, px + 0.12);
+    }
+}
+
+/* ---------- crisp HiDPI canvas, letterboxed so it fills any width ---------- */
+let dpr = 1, scale = 1, offX = 0, offY = 0;
+function resize(){
+    const r = screen.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.max(1, Math.round(r.width * dpr));
+    canvas.height = Math.max(1, Math.round(r.height * dpr));
+    scale = Math.min(r.width / W, r.height / H);
+    offX = (r.width - W * scale) / 2;
+    offY = (r.height - H * scale) / 2;
+}
+if ('ResizeObserver' in window) new ResizeObserver(resize).observe(screen);
+window.addEventListener('resize', resize);
+resize();
+
+/* ---------- storage + audio ---------- */
+const store = {
+    get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } },
+    set(k, v){ try { localStorage.setItem(k, v); } catch(e){} }
+};
+const FX = {
+    muted: store.get('antiSndMuted') === '1',
+    ctx: null,
+    ensure(){
+        if (!this.ctx){ const AC = window.AudioContext || window.webkitAudioContext; if (AC) this.ctx = new AC(); }
+        if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+    },
+    blip(f0, f1, dur, type, vol, delay = 0){
+        if (this.muted) return; this.ensure(); if (!this.ctx) return;
+        const t = this.ctx.currentTime + delay;
+        const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+        o.type = type;
+        o.frequency.setValueAtTime(f0, t);
+        o.frequency.exponentialRampToValueAtTime(Math.max(1, f1), t + dur);
+        g.gain.setValueAtTime(vol, t);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        o.connect(g); g.connect(this.ctx.destination);
+        o.start(t); o.stop(t + dur + 0.03);
+    },
+    jump(){ this.blip(440, 780, 0.09, 'square', 0.045); },
+    point(){ this.blip(1180, 1180, 0.06, 'square', 0.035); this.blip(1480, 1480, 0.09, 'square', 0.035, 0.08); },
+    die(){ this.blip(300, 55, 0.32, 'sawtooth', 0.055); }
+};
+function syncSnd(){
+    sndBtn.innerHTML = FX.muted ? '<i class="fa-solid fa-volume-xmark"></i>' : '<i class="fa-solid fa-volume-high"></i>';
+    sndBtn.title = FX.muted ? 'Sound: off' : 'Sound: on';
+}
+syncSnd();
+sndBtn.addEventListener('click', () => {
+    FX.muted = !FX.muted; store.set('antiSndMuted', FX.muted ? '1' : '0'); syncSnd();
+    if (!FX.muted){ FX.ensure(); FX.blip(880, 880, 0.05, 'square', 0.04); }
+});
+
+/* ---------- state ---------- */
+let inputUnlocked = false;
+window.addEventListener('anti:booted', () => inputUnlocked = true);
+setTimeout(() => inputUnlocked = true, 5000);
+
+let state = 'idle', paused = false;
+let speed = BASE_SPD, score = 0, lastSc = 0, lastPhase = 0;
+let hi = parseInt(store.get('antiHi') || '0', 10) || 0;
+let newHi = false;
+let night = true, flashA = 0, flashT = 0, shake = 0, deathT = 0;
+let spawnDist = 340, jumpBuf = 0, legT = 0, legFrame = 0, tGlob = 0;
+let blinkOn = false, blinkT = 140;
+
+const dino = { x:26, y:GROUND, vy:0, onGround:true, duckWanted:false, ducking:false };
+const obstacles = [];
+const clouds = Array.from({ length:4 }, () => ({
+    x: Math.random() * W, y: 12 + Math.random() * 48,
+    s: 1.15 + Math.random() * 0.7, spd: 0.18 + Math.random() * 0.28
+}));
+const stars = Array.from({ length:14 }, () => ({ x:Math.random()*W, y:8+Math.random()*58, ph:Math.random()*Math.PI*2 }));
+const marks = Array.from({ length:24 }, () => ({ x:Math.random()*W, y:GROUND+4+Math.random()*8, len:2+Math.random()*5, a:0.14+Math.random()*0.26 }));
+let moonX = 310;
+
+const UICLASS = {
+    READY:      ['bg-zinc-600', 'text-zinc-500'],
+    RUNNING:    ['bg-accent animate-pulse', 'text-accent'],
+    PAUSED:     ['bg-zinc-500 animate-pulse', 'text-zinc-400'],
+    'GAME OVER':['bg-zinc-300', 'text-zinc-200']
+};
+function setUi(name){
+    stateDot.className = 'w-1.5 h-1.5 rounded-full transition-colors ' + UICLASS[name][0];
+    stateTxt.className = 'tracking-[0.15em] transition-colors ' + UICLASS[name][1];
+    stateTxt.textContent = name;
+}
+setUi('READY');
+if (matchMedia('(pointer: coarse)').matches) hintEl.textContent = 'TAP JUMP · SWIPE ↓ DUCK';
+
+/* ---------- spawning ---------- */
+function nextGap(){ const gmin = 95 + speed * 26; return gmin + Math.random() * (140 + speed * 10); }
+function spawnObstacle(){
+    if (score > 250 && Math.random() < 0.26){
+        const r = Math.random();
+        const y = r < 0.45 ? GROUND - 29 : r < 0.85 ? GROUND - 26 : GROUND - 58; // low / mid / high
+        obstacles.push({ type:'bird', x:W + 14, y, w:17.6, h:11, t:Math.random()*20 });
+    } else {
+        const big = score > 120 && Math.random() < 0.3;
+        const parts = []; let wT = 0, hMax = 0;
+        if (big){ parts.push({ dx:0, px:1.75 }); wT = 8 * 1.75; hMax = 13 * 1.75; }
+        else {
+            const n = 1 + (Math.random() < 0.45 ? 1 : 0) + (Math.random() < 0.18 ? 1 : 0);
+            for (let i = 0; i < n; i++){
+                const px = Math.random() < 0.3 ? 1.5 : 1.3;
+                parts.push({ dx:wT, px }); wT += 8 * px + 2; hMax = Math.max(hMax, 13 * px);
+            }
+        }
+        obstacles.push({ type:'cactus', x:W + 14, y:GROUND, w:wT, h:hMax, parts });
+    }
+}
+
+/* ---------- core actions ---------- */
+function doJump(){ dino.vy = JUMP_V; dino.onGround = false; dino.ducking = false; FX.jump(); }
+function reset(){
+    score = 0; lastSc = 0; lastPhase = 0; night = true; speed = BASE_SPD;
+    flashA = 0; flashT = 0; shake = 0; newHi = false;
+    obstacles.length = 0; spawnDist = 340; jumpBuf = 0; legT = 0;
+    dino.x = 26; dino.y = GROUND; dino.vy = 0; dino.onGround = true;
+    dino.duckWanted = false; dino.ducking = false;
+    document.title = BASE_TITLE;
+}
+function start(){ reset(); state = 'running'; setUi('RUNNING'); }
+function restart(){ start(); }
+function die(){
+    state = 'dead'; deathT = 0; shake = 7; FX.die();
+    const sc = score | 0;
+    newHi = sc > hi && sc > 0;
+    if (newHi){ hi = sc; store.set('antiHi', String(hi)); }
+    setUi('GAME OVER');
+    document.title = `anti — GAME OVER · ${String(sc).padStart(5,'0')}`;
+}
+function press(){
+    if (!inputUnlocked) return;
+    FX.ensure();
+    if (paused){ paused = false; setUi('RUNNING'); return; }
+    if (state === 'idle'){ start(); doJump(); }
+    else if (state === 'running'){ if (dino.onGround) doJump(); else jumpBuf = 9; }
+    else if (state === 'dead' && deathT > 18){ start(); }
+}
+
+/* ---------- input ---------- */
+window.addEventListener('keydown', e => {
+    if (e.code === 'Space' || e.code === 'ArrowUp'){ e.preventDefault(); if (!e.repeat) press(); }
+    else if (e.code === 'ArrowDown' || e.code === 'KeyS'){ e.preventDefault(); dino.duckWanted = true; }
+    else if (e.code === 'KeyR' && inputUnlocked){ (state === 'idle') ? start() : restart(); }
+});
+window.addEventListener('keyup', e => {
+    if (e.code === 'Space' || e.code === 'ArrowUp'){ if (dino.vy < V_CUT) dino.vy = V_CUT; }
+    else if (e.code === 'ArrowDown' || e.code === 'KeyS'){ dino.duckWanted = false; }
+});
+let touchY = null;
+canvas.addEventListener('pointerdown', e => {
+    e.preventDefault(); touchY = e.clientY;
+    try { canvas.setPointerCapture(e.pointerId); } catch(_){}
+    press();
+});
+canvas.addEventListener('pointermove', e => {
+    if (touchY != null && touchY - e.clientY > 24) dino.duckWanted = true;
+});
+window.addEventListener('pointerup', () => {
+    touchY = null; dino.duckWanted = false;
+    if (dino.vy < V_CUT) dino.vy = V_CUT; // short tap = short hop
+});
+rstBtn.addEventListener('click', () => { if (inputUnlocked){ (state === 'idle') ? start() : restart(); } });
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden && state === 'running' && !paused){ paused = true; setUi('PAUSED'); }
+});
+
+/* ---------- update ---------- */
+const rects = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+
+function update(dt){
+    if (!dino.onGround){
+        const extra = (dino.duckWanted && dino.vy > 0) ? 0.9 : 0; // fast-fall
+        dino.vy += (GRAV + extra) * dt;
+        dino.y += dino.vy * dt;
+        if (dino.y >= GROUND){
+            dino.y = GROUND; dino.vy = 0; dino.onGround = true; dino.ducking = dino.duckWanted;
+            if (jumpBuf > 0){ jumpBuf = 0; doJump(); } // buffered jump
+        }
+    } else { dino.ducking = dino.duckWanted; }
+    if (jumpBuf > 0) jumpBuf -= dt;
+
+    speed = Math.min(MAX_SPD, speed + 0.0016 * dt);
+    score += speed * dt * 0.031;
+    const sc = score | 0;
+    if (sc !== lastSc){
+        if (sc > 0 && sc % 100 === 0){ flashT = 42; FX.point(); } // milestone beep + blink
+        lastSc = sc;
+    }
+    const phase = (sc / 500) | 0;
+    if (phase !== lastPhase){ lastPhase = phase; night = !night; flashA = 1; } // day <-> night flip
+    if (flashT < 0) flashT = 0;
+
+    spawnDist -= speed * dt;
+    if (spawnDist <= 0){ spawnObstacle(); spawnDist = nextGap(); }
+
+    for (let i = obstacles.length - 1; i >= 0; i--){
+        const o = obstacles[i];
+        o.x -= (o.type === 'bird' ? speed + 1.35 : speed) * dt;
+        if (o.type === 'bird') o.t += dt;
+        if (o.x + o.w < -30) obstacles.splice(i, 1);
+    }
+    marks.forEach(m => {
+        m.x -= speed * dt;
+        if (m.x < -8){ m.x += W + 20 + Math.random() * 40; m.y = GROUND + 4 + Math.random() * 8; m.len = 2 + Math.random() * 5; }
+    });
+    legT += speed * dt; legFrame = ((legT / 13) | 0) % 2;
+
+    // collisions (forgiving hitboxes)
+    const db = (dino.ducking && dino.onGround)
+        ? { x:dino.x + 2, y:GROUND - 12, w:20, h:12 }
+        : { x:dino.x + 5, y:dino.y - 23, w:12, h:23 };
+    for (const o of obstacles){
+        const ob = (o.type === 'cactus')
+            ? { x:o.x + 2, y:o.y - o.h + 1, w:Math.max(4, o.w - 5), h:o.h - 1 }
+            : { x:o.x + 2, y:o.y + 2,   w:Math.max(4, o.w - 6), h:o.h - 4 };
+        if (rects(db, ob)){ die(); return; }
+    }
+}
+
+/* ---------- drawing ---------- */
+function txt(str, x, y, o = {}){
+    const { size = 10, weight = 700, color = '#fff', align = 'center', ls = 2 } = o;
+    ctx.font = `${weight} ${size}px "JetBrains Mono", monospace`;
+    ctx.letterSpacing = ls + 'px';
+    ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = 'middle';
+    ctx.fillText(str, x, y);
+    ctx.letterSpacing = '0px';
+}
+
+function drawDino(fg, bg){
+    if (dino.ducking && dino.onGround && state === 'running'){
+        const px = 1.15, top = dino.y - 11 * px;
+        drawSprite(DUCK_BODY, dino.x, top, px, fg);
+        drawSprite(legFrame ? DUCK_A : DUCK_B, dino.x, top + 8 * px, px, fg);
+        return;
+    }
+    const px = 1.18, top = dino.y - 22 * px;
+    drawSprite(DINO_BODY, dino.x, top, px, fg);
+    const legs = (state === 'dead' || !dino.onGround || state === 'idle') ? LEGS_STAND : (legFrame ? LEGS_RUN1 : LEGS_RUN2);
+    drawSprite(legs, dino.x, top + 17 * px, px, fg);
+    const eyeX = dino.x + 11 * px, eyeY = top + 2 * px;
+    if (state === 'dead'){ // wide-open surprised eye
+        ctx.fillStyle = fg; ctx.fillRect(eyeX - 1.2, eyeY - 1.2, px + 2.4, px + 2.4);
+        ctx.fillStyle = bg; ctx.fillRect(eyeX, eyeY, px, px);
+    } else if (state === 'idle' && blinkOn){ // idle blink
+        ctx.fillStyle = fg; ctx.fillRect(eyeX - 0.5, eyeY - 0.5, px + 1, px + 1);
+    }
+}
+
+function drawScore(pal){
+    ctx.font = '700 11px "JetBrains Mono", monospace';
+    ctx.textBaseline = 'middle'; ctx.textAlign = 'right';
+    const sStr = String(score | 0).padStart(5, '0');
+    const hiStr = 'HI ' + String(hi).padStart(5, '0');
+    const hide = flashT > 0 && (((flashT / 6) | 0) % 2 === 1);
+    const sw = ctx.measureText(sStr).width;
+    if (!hide){ ctx.fillStyle = rgba(pal.fg, 0.92); ctx.fillText(sStr, W - 10, 15); }
+    ctx.fillStyle = rgba(pal.fg, 0.32); ctx.fillText(hiStr, W - 10 - sw - 12, 15);
+}
+
+function draw(){
+    const pal = night ? PAL.night : PAL.day;
+    const bg = rgba(pal.bg), fg = rgba(pal.fg);
+    ctx.setTransform(scale * dpr, 0, 0, scale * dpr, offX * dpr, offY * dpr);
+    ctx.imageSmoothingEnabled = false;
+    if (shake > 0.2) ctx.translate((Math.random() - .5) * shake, (Math.random() - .5) * shake);
+
+    // oversize fill so letterbox bands + shake are always covered
+    ctx.fillStyle = bg; ctx.fillRect(-60, -60, W + 120, H + 120);
+
+    if (night){
+        stars.forEach(s => {
+            const a = 0.16 + 0.34 * (0.5 + 0.5 * Math.sin(tGlob * 0.045 + s.ph));
+            ctx.fillStyle = rgba(pal.fg, a); ctx.fillRect(s.x, s.y, 2, 2);
+        });
+        ctx.fillStyle = rgba(pal.fg, 0.85);
+        ctx.beginPath(); ctx.arc(moonX, 26, 6.5, 0, 7); ctx.fill();
+        ctx.fillStyle = bg;
+        ctx.beginPath(); ctx.arc(moonX + 3, 24, 5.8, 0, 7); ctx.fill();
+    }
+    clouds.forEach(c => drawSprite(CLOUD_MAP, c.x, c.y, c.s, rgba(pal.fg, 0.15)));
+
+    ctx.fillStyle = rgba(pal.fg, 0.65); ctx.fillRect(0, GROUND, W, 2);
+    marks.forEach(m => { ctx.fillStyle = rgba(pal.fg, m.a); ctx.fillRect(m.x, m.y, m.len, 2); });
+
+    obstacles.forEach(o => {
+        if (o.type === 'cactus') o.parts.forEach(p => drawSprite(CACTUS_MAP, o.x + p.dx, o.y - 13 * p.px, p.px, fg));
+        else drawSprite((((o.t / 9) | 0) % 2) ? BIRD_B : BIRD_A, o.x, o.y, 1.1, fg);
+    });
+
+    drawDino(fg, bg);
+    if (state !== 'idle') drawScore(pal);
+
+    const blink = ((tGlob / 28) | 0) % 2 === 0;
+    if (state === 'idle'){
+        if (blink) txt('PRESS SPACE OR TAP TO START', W / 2, 58, { size:10, color:rgba(pal.fg, 0.8) });
+        txt('↑ JUMP · ↓ DUCK', W / 2, 78, { size:8, weight:500, color:rgba(pal.fg, 0.35) });
+    }
+    if (state === 'dead' && deathT > 6){
+        ctx.fillStyle = rgba(pal.bg, 0.55); ctx.fillRect(-60, -60, W + 120, H + 120);
+        txt('GAME OVER', W / 2, 52, { size:16, weight:800, color:rgba(pal.fg, 0.95), ls:5 });
+        txt('SCORE ' + String(score | 0).padStart(5, '0'), W / 2, 74, { size:9, weight:500, color:rgba(pal.fg, 0.55) });
+        if (newHi) txt('NEW HI — SAVED', W / 2, 88, { size:8, weight:700, color:rgba(pal.fg, 0.8) });
+        if (blink && deathT > 18) txt('SPACE / TAP TO RESTART', W / 2, 106, { size:9, color:rgba(pal.fg, 0.75) });
+    }
+    if (paused){
+        ctx.fillStyle = rgba(pal.bg, 0.6); ctx.fillRect(-60, -60, W + 120, H + 120);
+        txt('PAUSED', W / 2, 60, { size:14, weight:800, color:rgba(pal.fg, 0.9), ls:4 });
+        txt('PRESS ANY KEY TO RESUME', W / 2, 84, { size:9, weight:500, color:rgba(pal.fg, 0.5) });
+    }
+    if (flashA > 0){ ctx.fillStyle = rgba(pal.fg, flashA * 0.85); ctx.fillRect(-60, -60, W + 120, H + 120); }
+    txt('dino_runner · anti os', 10, H - 12, { size:7, weight:500, color:rgba(pal.fg, 0.3), align:'left', ls:1 });
+}
+
+/* ---------- always-on ambient tick ---------- */
+function tick(dt){
+    tGlob += dt;
+    if (state === 'dead') deathT += dt;
+    if (shake > 0) shake = Math.max(0, shake - 0.35 * dt);
+    if (flashA > 0) flashA = Math.max(0, flashA - 0.05 * dt);
+    if (flashT > 0) flashT -= dt;
+    blinkT -= dt;
+    if (blinkT <= 0){ blinkOn = !blinkOn; blinkT = blinkOn ? 4 : 130 + Math.random() * 170; }
+    clouds.forEach(c => { c.x -= c.spd * dt; if (c.x < -24){ c.x = W + 24; c.y = 12 + Math.random() * 48; } });
+    if (night){ moonX -= 0.05 * dt; if (moonX < -16) moonX = W + 24; }
+}
+
+/* ---------- main loop (dt-normalized) ---------- */
+let last = performance.now();
+function loop(now){
+    let dt = (now - last) / 16.666; last = now;
+    if (dt > 2.5) dt = 2.5; if (dt < 0) dt = 0;
+    tick(dt);
+    if (state === 'running' && !paused) update(dt);
+    draw();
+    if (((tGlob | 0) % 6) === 0) spdEl.textContent = '×' + (speed / BASE_SPD).toFixed(2);
+    requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+/* CTA button boots the game after the smooth-scroll lands */
+window.ANTI_GAME = { start: () => { if (inputUnlocked && state === 'idle') start(); } };
+})();
+
+document.getElementById('ctaPlay').addEventListener('click', () => {
+    setTimeout(() => { window.ANTI_GAME && window.ANTI_GAME.start(); }, 750);
+});
+</script>
+</body>
+</html>
